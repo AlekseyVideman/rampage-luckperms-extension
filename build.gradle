@@ -1,0 +1,54 @@
+plugins {
+    id 'com.github.johnrengelman.shadow' version '8.1.1'
+    id 'java'
+}
+
+sourceCompatibility = 17
+targetCompatibility = 17
+
+repositories {
+    mavenCentral()
+    maven {
+        url "https://" + (System.getenv('CI_SERVER_HOST') ?: "gitlab.rampagemc.com") + "/api/v4/groups/41/-/packages/maven"
+        name "GitLab"
+        credentials(HttpHeaderCredentials) {
+            name = 'Private-Token'
+            value = findProperty("gitlab.rampage.token") ?: System.getenv("GITLAB_TOKEN_READ_CI")
+        }
+        authentication {
+            header(HttpHeaderAuthentication)
+        }
+    }
+}
+
+ext {
+    javalinVersion = '5.6.1'
+    joorVersion = '0.9.14'
+    backlibVersion = '0.3.5'
+}
+
+dependencies {
+    compileOnly fileTree(dir: 'libs', include: ['*.jar'])
+
+    implementation("com.rampagemc:backlib-rampage:${backlibVersion}") {
+        exclude(group: 'io.jsonwebtoken')
+        exclude(group: 'org.springframework.boot')
+        exclude(group: 'org.springframework.security')
+        exclude(group: 'org.zalando')
+    }
+
+    implementation "io.javalin:javalin:${javalinVersion}"
+    implementation "org.jooq:joor:${joorVersion}"
+
+    compileOnly 'org.projectlombok:lombok:1.18.30'
+    annotationProcessor 'org.projectlombok:lombok:1.18.30'
+}
+
+shadowJar {
+    archiveClassifier = ""
+    archiveBaseName = rootProject.name
+    archiveVersion = rVersion
+}
+
+tasks.build.dependsOn(shadowJar)
+project.gradle.startParameter.excludedTaskNames.add("jar")
